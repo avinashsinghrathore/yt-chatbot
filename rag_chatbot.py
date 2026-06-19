@@ -21,8 +21,9 @@ api_key = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 
 # Step 1a - Indexing (Document Ingestion)
 # video_id = "k4yz7ZP9GA4"  # 18
-# video_id = "2HIJlD46Kig" # 91
-video_id = "J5_-l7WIO_w"  # 51
+# video_id = "2HIJlD46Kig"  # 91
+# video_id = "J5_-l7WIO_w"  # 51
+video_id = "-HzgcbRXUK8"    # 184
 
 try:
     ytt_api = YouTubeTranscriptApi()
@@ -40,9 +41,9 @@ except Exception as e:
 # Step 1b Indexing Text-spiliting
 splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
 chunks = splitter.create_documents([transcript])
+# print(transcript)
 print(len(chunks))
-
-print(chunks[50].page_content)
+# print(chunks[50].page_content)
 
 # Step 1c & 1d - Indexing (Embedding Generation and Storing in Vector Store)
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
@@ -64,4 +65,14 @@ else:
 
 print(vector_store.index_to_docstore_id)
 
-# print(vector_store.get_by_ids(["93457261-45d5-462c-97a2-364c9e5d18c0"]))
+# print(vector_store.get_by_ids(["50d483ea-e4f0-4b42-b818-a666d8fc0a32"]))
+
+# Step 2 Retrieval
+
+retriver = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+# print(retriver)
+
+result = retriver.invoke("what is deepmind")
+print(result)
+
+
