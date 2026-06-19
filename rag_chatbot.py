@@ -11,6 +11,12 @@ from langchain_huggingface import (
 )
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
+from langchain_core.runnables import (
+    RunnableParallel,
+    RunnablePassthrough,
+    RunnableLambda,
+)
+from langchain_core.output_parsers import StrOutputParser
 
 # optional decorator to print line by line
 # import pprint
@@ -78,7 +84,7 @@ retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"
 # Step 3 Augmentation
 # model setup
 llm = HuggingFaceEndpoint(
-    repo_id="deepseek-ai/DeepSeek-V4-Pro", task="conversational", temperature=0.2
+    repo_id="meta-llama/Llama-3.1-8B-Instruct", task="conversational", temperature=0.2
 )
 model = ChatHuggingFace(llm=llm)
 
@@ -92,7 +98,9 @@ prompt = PromptTemplate(
     input_variables=["context", "question"],
 )
 
-question = "is the topic of nuclear discussed in this video ? if yes then what was discussed"
+question = (
+    "is the topic of nuclear discussed in this video ? if yes then what was discussed"
+)
 retrieved_docs = retriever.invoke(question)
 
 # print(retrieved_docs)
@@ -105,4 +113,29 @@ final_prompt = prompt.invoke({"context": context_text, "question": question})
 
 # Generation
 answer = model.invoke(final_prompt)
-print(answer.content)
+# print(answer.content)
+
+
+# Building chain
+def format_docs(retrieved_docs):
+    context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
+    return context_text
+
+
+parallel_chain = RunnableParallel(
+    {
+        "context": retriever | RunnableLambda(format_docs),
+        "question": RunnablePassthrough(),
+    }
+)
+
+# result = parallel_chain.invoke("who is demis")
+# print(result)
+
+parser = StrOutputParser()
+
+main_chain = parallel_chain | prompt | model | parser
+
+result = main_chain.invoke("can you summarize the video")
+
+print(result)
