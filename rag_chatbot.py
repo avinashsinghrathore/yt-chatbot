@@ -23,7 +23,7 @@ api_key = os.getenv("HUGGINGFACEHUB_API_TOKEN")
 # video_id = "k4yz7ZP9GA4"  # 18
 # video_id = "2HIJlD46Kig"  # 91
 # video_id = "J5_-l7WIO_w"  # 51
-video_id = "-HzgcbRXUK8"    # 184
+video_id = "-HzgcbRXUK8"  # 184
 
 try:
     ytt_api = YouTubeTranscriptApi()
@@ -69,10 +69,34 @@ print(vector_store.index_to_docstore_id)
 
 # Step 2 Retrieval
 
-retriver = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
 # print(retriver)
 
-result = retriver.invoke("what is deepmind")
-print(result)
+# result = retriever.invoke("what is deepmind")
+# print(result)
 
+# Step 3 Augmentation
+# model setup
+llm = HuggingFaceEndpoint(repo_id="deepseek-ai/DeepSeek-V4-Pro", task="text-generation")
+model = ChatHuggingFace(llm=llm)
 
+prompt = PromptTemplate(
+    template=""" You are helpful assistant.
+    Answer ONLY from the provided transcript context.
+    If the context is insufficient, just say you don't know  
+    {context}
+    Question: {question}                                                         
+    """,
+    input_variables=["context", "question"],
+)
+
+question = "is the topic of investment discussed in this video ? if yes then what was discussed"
+retrieved_docs = retriever.invoke(question)
+
+# print(retrieved_docs)
+
+context_text = "\n\n".join(doc.page_content for doc in retrieved_docs)
+# print(context_text)
+
+final_prompt = prompt.invoke({"context": context_text, "question": question})
+print(final_prompt)
